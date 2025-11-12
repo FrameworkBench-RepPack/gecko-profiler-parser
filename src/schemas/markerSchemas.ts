@@ -57,12 +57,15 @@ const networkPayloadSchema = z.object({
   responseEnd: z.number().optional(),
 });
 
-enum MarkerPhaseEnum {
-  Instant = 0,
-  Interval = 1,
-  IntervalStart = 2,
-  IntervalEnd = 3,
-}
+const MarkerPhaseEnum = {
+  Instant: 0,
+  Interval: 1,
+  IntervalStart: 2,
+  IntervalEnd: 3,
+} as const;
+
+export type PowerAmountUnit =
+  (typeof MarkerPhaseEnum)[keyof typeof MarkerPhaseEnum];
 
 const markerPayloadSchema = z.union([networkPayloadSchema, z.unknown()]);
 

@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { markerSchema } from "./markerSchemas";
+import { markerSchema } from "./markerSchemas.ts";
 
 const threadSchema = z.object({
   // Missing: tracedObjectShapes, tracedValues

@@ -19,7 +19,6 @@
 		] /* Specify type package names to be included without being referenced in a source file. */,
 		"allowImportingTsExtensions": true /* Allow imports to include TypeScript file extensions. Requires '--moduleResolution bundler' and either '--noEmit' or '--emitDeclarationOnly' to be set. */,
 		"outDir": "./dist",
-		"rootDir": "./src",
 
 		/* Emit */
 		"noEmit": true /* Disable emitting files from a compilation. */,

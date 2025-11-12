@@ -1,0 +1,1 @@
+{"root":["./src/index.ts","./src/power-amount.ts","./src/schemas/markerschemas.ts","./src/schemas/metadataschemas.ts","./src/schemas/profilerschema.ts","./src/schemas/threadschemas.ts","./src/utilities/file-helpers.ts","./src/utilities/power-utilities.ts","./src/utilities/processor.ts","./src/worker/worker-types.ts","./src/worker/worker.ts"],"version":"5.9.3"}

@@ -1,5 +1,8 @@
-import { InputFile } from "../utilities/file-helpers.ts";
-import { PowerAmount, BenchmarkPowerConsumption } from "../power-amount.ts";
+import { type InputFile } from "../utilities/file-helpers.ts";
+import {
+  PowerAmount,
+  type BenchmarkPowerConsumption,
+} from "../power-amount.ts";
 
 type ProcessedFile = InputFile & {
   powerConsumption: BenchmarkPowerConsumption;
@@ -14,19 +17,23 @@ export type WorkerOutputData = {
   benchmark: string;
   framework: string;
   average: PowerAmount;
-  standardDeviation: number;
-  files: ProcessedFile[];
+  standardDeviation: PowerAmount;
+  // files: ProcessedFile[];
 };
 
 export const MessageType = {
-  Finished: 0,
-  Error: 1,
+  Start: 0,
+  Finished: 1,
+  Error: 2,
+  Terminate: 3,
 } as const;
 export type MessageType = (typeof MessageType)[keyof typeof MessageType];
 
 type PayloadMap = {
+  [MessageType.Start]: WorkerInputData;
   [MessageType.Finished]: WorkerOutputData;
   [MessageType.Error]: { error: string };
+  [MessageType.Terminate]: null;
 };
 
 export type WorkerMessage<Type extends MessageType> = {

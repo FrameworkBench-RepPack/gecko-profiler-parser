@@ -1,6 +1,6 @@
 import * as z from "zod";
-import { processMetaSchema, fullMetaSchema } from "./metadataSchemas";
-import { threadListSchema } from "./threadSchemas";
+import { processMetaSchema, fullMetaSchema } from "./metadataSchemas.ts";
+import { threadListSchema } from "./threadSchemas.ts";
 
 const pageSchema = z.object({
   tabID: z.number(),
