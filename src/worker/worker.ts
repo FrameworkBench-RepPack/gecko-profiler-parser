@@ -22,9 +22,7 @@ function onWorkerMessage<T extends MessageType>(
   });
 }
 
-function getAveragePowerConsumption(
-  inputs: PowerAmount[],
-): PowerAmount | undefined {
+function getAveragePower(inputs: PowerAmount[]): PowerAmount | undefined {
   if (inputs.length === 0) return undefined;
 
   const consumption = inputs.reduce<PowerAmount>(
@@ -39,7 +37,7 @@ function getAveragePowerConsumption(
   return consumption;
 }
 
-function getMeanPowerConsumption(
+function getPowerStandardDeviation(
   inputs: PowerAmount[],
 ): PowerAmount | undefined {
   if (inputs.length === 0) return undefined;
@@ -144,9 +142,9 @@ function serializeProcessedFile(
       payload: {
         benchmark: payload.benchmark,
         framework: payload.framework,
-        powerAverage: getAveragePowerConsumption(processedTotalPower)?.toJSON(),
+        powerAverage: getAveragePower(processedTotalPower)?.toJSON(),
         powerStandardDeviation:
-          getMeanPowerConsumption(processedTotalPower)?.toJSON(),
+          getPowerStandardDeviation(processedTotalPower)?.toJSON(),
         files: processedFiles.map((f) => serializeProcessedFile(f)),
       },
     });
