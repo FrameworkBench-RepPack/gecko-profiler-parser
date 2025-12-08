@@ -1,6 +1,6 @@
+import Decimal from "decimal.js";
 import type { Thread } from "../schemas/threadSchemas.ts";
 import { isNetworkPayload } from "../schemas/markerSchemas.ts";
-import Decimal from "decimal.js";
 
 export type SerializedBandwidth = string;
 

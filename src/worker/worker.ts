@@ -51,7 +51,7 @@ function getPowerStandardDeviation(
     .reduce<Decimal>((acc, curr) => {
       return acc.add(curr.getAmount(PowerAmountUnit.PicoWattHour));
     }, new Decimal(0))
-    .dividedBy(new Decimal(inputs.length));
+    .dividedBy(inputs.length);
 
   const sumPart = inputs.reduce((acc, curr) => {
     return acc.add(

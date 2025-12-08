@@ -1,3 +1,4 @@
+import Decimal from "decimal.js";
 import {
   PowerAmountUnit,
   PowerAmount,
@@ -6,7 +7,6 @@ import {
   type SerializedPowerAmountSeries,
 } from "../power-amount.ts";
 import { type Counter } from "../schemas/profilerSchema.ts";
-import Decimal from "decimal.js";
 
 export type SerializedBenchmarkPowerConsumption = {
   total: SerializedPowerAmount;
