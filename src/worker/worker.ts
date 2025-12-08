@@ -16,6 +16,7 @@ import {
   type BenchmarkBandwidth,
   processBandwidth,
 } from "../utilities/bandwidth.ts";
+import Decimal from "decimal.js";
 
 function onWorkerMessage<T extends MessageType>(
   type: T,
@@ -34,10 +35,10 @@ function getAveragePower(inputs: PowerAmount[]): PowerAmount | undefined {
       acc.addAmount(curr);
       return acc;
     },
-    new PowerAmount(0, PowerAmountUnit.PicoWattHour),
+    new PowerAmount(new Decimal(0), PowerAmountUnit.PicoWattHour),
   );
 
-  consumption.setAmount(consumption.getAmount() / inputs.length);
+  consumption.setAmount(consumption.getAmount().dividedBy(inputs.length));
   return consumption;
 }
 
@@ -46,45 +47,45 @@ function getPowerStandardDeviation(
 ): PowerAmount | undefined {
   if (inputs.length === 0) return undefined;
 
-  const mean =
-    inputs.reduce((acc, curr) => {
-      acc += curr.getAmount(PowerAmountUnit.PicoWattHour);
-      return acc;
-    }, 0) / inputs.length;
+  const mean = inputs
+    .reduce<Decimal>((acc, curr) => {
+      return acc.add(curr.getAmount(PowerAmountUnit.PicoWattHour));
+    }, new Decimal(0))
+    .dividedBy(new Decimal(inputs.length));
 
   const sumPart = inputs.reduce((acc, curr) => {
-    acc += (curr.getAmount(PowerAmountUnit.PicoWattHour) - mean) ** 2;
-    return acc;
-  }, 0);
+    return acc.add(
+      curr.getAmount(PowerAmountUnit.PicoWattHour).sub(mean).pow(2),
+    );
+  }, new Decimal(0));
 
   return new PowerAmount(
-    Math.sqrt(sumPart / inputs.length),
+    sumPart.div(inputs.length).sqrt(),
     PowerAmountUnit.PicoWattHour,
   );
 }
 
-function getAverageBandwidth(inputs: number[]): number | undefined {
+function getAverageBandwidth(inputs: Decimal[]): Decimal | undefined {
   if (inputs.length === 0) return undefined;
 
-  let totalBytes = 0;
+  let totalBytes = new Decimal(0);
   for (const input of inputs) {
-    totalBytes += input;
+    totalBytes = totalBytes.add(input);
   }
 
-  return totalBytes / inputs.length;
+  return totalBytes.div(inputs.length);
 }
 
-function getBandwidthStandardDeviation(inputs: number[]): number | undefined {
+function getBandwidthStandardDeviation(inputs: Decimal[]): Decimal | undefined {
   if (inputs.length === 0) return undefined;
 
   const mean = getAverageBandwidth(inputs)!;
 
   const sumPart = inputs.reduce((acc, curr) => {
-    acc += (curr - mean) ** 2;
-    return acc;
-  }, 0);
+    return acc.add(new Decimal(curr).sub(mean).pow(2));
+  }, new Decimal(0));
 
-  return Math.sqrt(sumPart / inputs.length);
+  return sumPart.div(inputs.length).sqrt();
 }
 
 function postMessage<T extends MessageType>(message: MessageStructures[T][0]) {
@@ -158,6 +159,14 @@ function serializeProcessedFile(
           measurements: processedFile.powerConsumption.measurements.toJSON(),
         }
       : undefined,
+    bandwidth: processedFile.bandwidth
+      ? {
+          total: processedFile.bandwidth.total.toString(),
+          measurements: processedFile.bandwidth.measurements.map(
+            ([file, bandwidth]) => [file, bandwidth.toString()],
+          ),
+        }
+      : undefined,
   };
 }
 
@@ -187,10 +196,12 @@ function serializeProcessedFile(
         powerAverage: getAveragePower(processedTotalPower)?.toJSON(),
         powerStandardDeviation:
           getPowerStandardDeviation(processedTotalPower)?.toJSON(),
-        bandwidthAverage: getAverageBandwidth(processedTotalBandwidth),
+        bandwidthAverage: getAverageBandwidth(
+          processedTotalBandwidth,
+        )?.toString(),
         bandwidthStandardDeviation: getBandwidthStandardDeviation(
           processedTotalBandwidth,
-        ),
+        )?.toString(),
         files: processedFiles.map((f) => serializeProcessedFile(f)),
       },
     });
@@ -205,7 +216,7 @@ function serializeProcessedFile(
   .catch((err) => {
     parentPort?.postMessage({
       type: MessageType.Error,
-      payload: { error: err.message },
+      payload: { error: err },
     });
   })
   .finally(() => process.exit(0));
