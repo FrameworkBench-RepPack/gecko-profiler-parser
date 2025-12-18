@@ -1,3 +1,4 @@
+import Decimal from "decimal.js";
 import {
   PowerAmountUnit,
   PowerAmount,
@@ -30,10 +31,10 @@ export function processPowerConsumption(
     throw new Error("Counter does not contain power samples");
 
   const powerConsumption: {
-    total: number;
-    measurements: { time: number; power: number }[];
+    total: Decimal;
+    measurements: { time: Decimal; power: Decimal }[];
   } = {
-    total: 0,
+    total: new Decimal(0),
     measurements: [],
   };
 
@@ -43,10 +44,10 @@ export function processPowerConsumption(
 
     if (!time || !power) throw new Error("Time or power not defined");
 
-    powerConsumption.total += power;
+    powerConsumption.total = powerConsumption.total.add(power);
     powerConsumption.measurements.push({
-      time,
-      power,
+      time: new Decimal(time),
+      power: new Decimal(power),
     });
   }
 

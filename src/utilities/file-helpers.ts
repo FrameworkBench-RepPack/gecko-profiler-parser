@@ -108,6 +108,7 @@ interface ResultsPathProps {
   inputPath: string;
   resultsFolderName: string;
   summedResultsFolderName: string;
+  combinedResultsFolderName: string;
   rawResultsFolderName?: string;
 }
 
@@ -115,8 +116,9 @@ export async function getResultsPaths({
   inputPath,
   resultsFolderName,
   summedResultsFolderName,
+  combinedResultsFolderName,
   rawResultsFolderName,
-}: ResultsPathProps): Promise<[string, string, string | undefined]> {
+}: ResultsPathProps): Promise<[string, string, string, string | undefined]> {
   const absoluteInputPath = getAbsolutePath(inputPath);
 
   const pathStats = await fs.lstat(absoluteInputPath);
@@ -135,6 +137,10 @@ export async function getResultsPaths({
   const totalResultsPath = path.join(resultsPath, summedResultsFolderName);
   if (!existsSync(totalResultsPath)) await fs.mkdir(totalResultsPath);
 
+  // Combined results path
+  const combinedResultsPath = path.join(resultsPath, combinedResultsFolderName);
+  if (!existsSync(combinedResultsPath)) await fs.mkdir(combinedResultsPath);
+
   // Raw results path
   const rawResultsPath = rawResultsFolderName
     ? path.join(resultsPath, rawResultsFolderName)
@@ -143,5 +149,5 @@ export async function getResultsPaths({
   if (rawResultsPath && !existsSync(rawResultsPath))
     await fs.mkdir(rawResultsPath);
 
-  return [resultsPath, totalResultsPath, rawResultsPath];
+  return [resultsPath, totalResultsPath, combinedResultsPath, rawResultsPath];
 }

@@ -1,3 +1,4 @@
+import Decimal from "decimal.js";
 export const PowerAmountUnit = {
   PicoWattHour: "pWh",
   MicroWattHour: "μWh",
@@ -9,33 +10,33 @@ export const PowerAmountUnit = {
 export type PowerAmountUnit =
   (typeof PowerAmountUnit)[keyof typeof PowerAmountUnit];
 
-const _conversionToWh: Record<PowerAmountUnit, number> = {
-  [PowerAmountUnit.PicoWattHour]: 1e-12, // 1 pWh = 1e-12 Wh
-  [PowerAmountUnit.MicroWattHour]: 1e-6, // 1 mWh = 1e-6 Wh
-  [PowerAmountUnit.MilliWattHour]: 1e-3, // 1 mWh = 1e-3 Wh
-  [PowerAmountUnit.WattHour]: 1, // 1 Wh = 1 Wh
-  [PowerAmountUnit.Joule]: 1 / 3600, // 1 J = 1 / 3600 Wh
+const _conversionToWh: Record<PowerAmountUnit, Decimal> = {
+  [PowerAmountUnit.PicoWattHour]: new Decimal(1e-12), // 1 pWh = 1e-12 Wh
+  [PowerAmountUnit.MicroWattHour]: new Decimal(1e-6), // 1 mWh = 1e-6 Wh
+  [PowerAmountUnit.MilliWattHour]: new Decimal(1e-3), // 1 mWh = 1e-3 Wh
+  [PowerAmountUnit.WattHour]: new Decimal(1), // 1 Wh = 1 Wh
+  [PowerAmountUnit.Joule]: new Decimal(1).dividedBy(3600), // 1 J = 1 / 3600 Wh
 } as const;
 
 function _convertPower(
   newUnit: PowerAmountUnit,
   currUnit: PowerAmountUnit,
-  currAmount: number,
+  currAmount: Decimal,
 ) {
-  const amountInWh = currAmount * _conversionToWh[currUnit];
-  return amountInWh / _conversionToWh[newUnit];
+  const amountInWh = currAmount.times(_conversionToWh[currUnit]);
+  return amountInWh.dividedBy(_conversionToWh[newUnit]);
 }
 
 export type SerializedPowerAmount = {
-  amount: number;
+  amount: string;
   unit: PowerAmountUnit;
 };
 
 export class PowerAmount {
-  #amount: number;
+  #amount: Decimal;
   #unit: PowerAmountUnit;
 
-  constructor(amount: number, unit: PowerAmountUnit) {
+  constructor(amount: Decimal, unit: PowerAmountUnit) {
     this.#amount = amount;
     this.#unit = unit;
   }
@@ -68,10 +69,10 @@ export class PowerAmount {
    * @returns The amount of power
    */
   addAmount(amount: PowerAmount) {
-    this.#amount += amount.getAmount(this.#unit);
+    this.#amount = this.#amount.add(amount.getAmount(this.#unit));
   }
 
-  setAmount(amount: number) {
+  setAmount(amount: Decimal) {
     this.#amount = amount;
   }
 
@@ -100,7 +101,7 @@ export class PowerAmount {
    */
   toJSON(): SerializedPowerAmount {
     return {
-      amount: this.#amount,
+      amount: this.#amount.toString(),
       unit: this.#unit,
     };
   }
@@ -109,22 +110,22 @@ export class PowerAmount {
     input: SerializedPowerAmount | undefined,
   ): PowerAmount | undefined {
     if (input === undefined) return undefined;
-    return new PowerAmount(input.amount, input.unit);
+    return new PowerAmount(new Decimal(input.amount), input.unit);
   }
 }
 
 export type SerializedPowerAmountSeries = {
-  series: { time: number; power: number }[];
+  series: { time: string; power: string }[];
   unit: PowerAmountUnit;
 };
 
 export class PowerAmountSeries {
-  #series: { time: number; power: number }[];
+  #series: { time: Decimal; power: Decimal }[];
   #unit: PowerAmountUnit;
 
   constructor(
     unit: PowerAmountUnit,
-    series?: { time: number; power: number }[],
+    series?: { time: Decimal; power: Decimal }[],
   ) {
     this.#series = series ? series : [];
     this.#unit = unit;
@@ -174,7 +175,9 @@ export class PowerAmountSeries {
    */
   toJSON(): SerializedPowerAmountSeries {
     return {
-      series: this.#series,
+      series: this.#series.map(({ time, power }) => {
+        return { time: time.toString(), power: power.toString() };
+      }),
       unit: this.#unit,
     };
   }
@@ -183,6 +186,11 @@ export class PowerAmountSeries {
     input: SerializedPowerAmountSeries | undefined,
   ): PowerAmountSeries | undefined {
     if (input === undefined) return undefined;
-    return new PowerAmountSeries(input.unit, input.series);
+    return new PowerAmountSeries(
+      input.unit,
+      input.series.map(({ time, power }) => {
+        return { time: new Decimal(time), power: new Decimal(power) };
+      }),
+    );
   }
 }

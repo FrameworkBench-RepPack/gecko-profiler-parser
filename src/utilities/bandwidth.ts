@@ -1,24 +1,33 @@
+import Decimal from "decimal.js";
 import type { Thread } from "../schemas/threadSchemas.ts";
 import { isNetworkPayload } from "../schemas/markerSchemas.ts";
 
-export type BandwidthMeasurement = [string, number];
+export type SerializedBandwidth = string;
+
+export type BandwidthMeasurement = [string, Decimal];
+export type SerializedBandwidthMeasurement = [string, SerializedBandwidth];
 
 export type BenchmarkBandwidth = {
-  total: number;
+  total: Decimal;
   measurements: BandwidthMeasurement[];
+};
+
+export type SerializedBenchmarkBandwidth = {
+  total: SerializedBandwidth;
+  measurements: SerializedBandwidthMeasurement[];
 };
 
 export function processBandwidth(
   markers: Thread["markers"]["data"],
 ): BenchmarkBandwidth {
-  let total = 0;
+  let total = new Decimal(0);
   const measurements: BandwidthMeasurement[] = [];
 
   for (const marker of markers) {
     const payload = marker[5];
     if (!isNetworkPayload(payload) || payload.count === undefined) continue;
-    measurements.push([payload.URI, payload.count]);
-    total += payload.count;
+    measurements.push([payload.URI, new Decimal(payload.count)]);
+    total = total.add(payload.count);
   }
 
   return {

@@ -19,6 +19,7 @@ import {
 } from "./power-amount";
 import { startWorker } from "./worker/start-worker";
 import { writeCSV } from "./utilities/csv-utilities";
+import Decimal from "decimal.js";
 
 const PROCESSING_WORKER_PATH = path.resolve(
   import.meta.dirname,
@@ -88,11 +89,12 @@ const PROCESSING_WORKER_PATH = path.resolve(
   }
   await Promise.all(workers);
 
-  const [resultsPath, summedResultsPath, rawResultsPath] =
+  const [resultsPath, summedResultsPath, combinedResultsPath, rawResultsPath] =
     await getResultsPaths({
       inputPath,
       resultsFolderName: "processed-results",
       summedResultsFolderName: "summed-results",
+      combinedResultsFolderName: "combined-results",
       rawResultsFolderName: options.exportRaw ? "raw-results" : undefined,
     });
 
@@ -102,6 +104,12 @@ const PROCESSING_WORKER_PATH = path.resolve(
       ...r,
       powerAverage: PowerAmount.fromJSON(r.powerAverage),
       powerStandardDeviation: PowerAmount.fromJSON(r.powerStandardDeviation),
+      bandwidthAverage: r.bandwidthAverage
+        ? new Decimal(r.bandwidthAverage)
+        : undefined,
+      bandwidthStandardDeviation: r.bandwidthStandardDeviation
+        ? new Decimal(r.bandwidthStandardDeviation)
+        : undefined,
       files: r.files.map((f) => {
         return {
           ...f,
@@ -111,6 +119,14 @@ const PROCESSING_WORKER_PATH = path.resolve(
               f.powerConsumption?.measurements,
             ),
           },
+          bandwidth: f.bandwidth
+            ? {
+                total: new Decimal(f.bandwidth?.total),
+                measurements: f.bandwidth.measurements.map<[string, Decimal]>(
+                  ([file, bandwidth]) => [file, new Decimal(bandwidth)],
+                ),
+              }
+            : undefined,
         };
       }),
     };
@@ -118,16 +134,18 @@ const PROCESSING_WORKER_PATH = path.resolve(
 
   /* Export per benchmark CSV processed results*/
   const perBenchmarkCsvEntries = deserializedResults.reduce<
-    Record<string, (string | number)[][]>
+    Record<string, string[][]>
   >((acc, result) => {
     if (!acc[result.benchmark]) acc[result.benchmark] = [];
 
     acc[result.benchmark]?.push([
       result.framework,
-      result.powerAverage?.getAmount(PowerAmountUnit.Joule) ?? "N/A",
-      result.powerStandardDeviation?.getAmount(PowerAmountUnit.Joule) ?? "N/A",
-      result.bandwidthAverage ?? "N/A",
-      result.bandwidthStandardDeviation ?? "N/A",
+      result.powerAverage?.getAmount(PowerAmountUnit.Joule).toString() ?? "N/A",
+      result.powerStandardDeviation
+        ?.getAmount(PowerAmountUnit.Joule)
+        .toString() ?? "N/A",
+      result.bandwidthAverage?.toString() ?? "N/A",
+      result.bandwidthStandardDeviation?.toString() ?? "N/A",
     ]);
 
     return acc;
@@ -147,6 +165,39 @@ const PROCESSING_WORKER_PATH = path.resolve(
     });
   }
 
+  /* Export per benchmark CSV processed results*/
+  const combinedPerBenchmarkIterations = deserializedResults.reduce<
+    Record<string, string[][]>
+  >((acc, result) => {
+    if (!acc[result.benchmark]) acc[result.benchmark] = [];
+
+    for (const file of result.files) {
+      acc[result.benchmark]?.push([
+        result.framework,
+        file.powerConsumption.total
+          ?.getAmount(PowerAmountUnit.Joule)
+          .toString() ?? "N/A",
+        file.bandwidth?.total?.toString() ?? "N/A",
+      ]);
+    }
+
+    return acc;
+  }, {});
+
+  for (const [benchmark, result] of Object.entries(
+    combinedPerBenchmarkIterations,
+  )) {
+    writeCSV({
+      path: combinedResultsPath + `/${benchmark}.csv`,
+      header: [
+        "Framework",
+        `Total Power (${PowerAmountUnit.Joule})`,
+        `Total Bandwidth (B)`,
+      ],
+      fields: result,
+    });
+  }
+
   for (const result of deserializedResults) {
     result.powerAverage?.convert(PowerAmountUnit.MicroWattHour);
     result.powerStandardDeviation?.convert(PowerAmountUnit.MicroWattHour);
@@ -159,7 +210,9 @@ const PROCESSING_WORKER_PATH = path.resolve(
           ? result.powerStandardDeviation.getString(2)
           : "N/A"
       } - Bandwidth: ${
-        result.bandwidthAverage ? `${result.bandwidthAverage / 1000} KB` : "N/A"
+        result.bandwidthAverage
+          ? `${result.bandwidthAverage.div(1000)} KB`
+          : "N/A"
       } Standard deviation: ${result.bandwidthStandardDeviation ?? "N/A"}`,
     );
 
@@ -173,10 +226,10 @@ const PROCESSING_WORKER_PATH = path.resolve(
       ],
       fields: result.files.map((processedFile, index) => [
         index,
-        processedFile.powerConsumption?.total?.getAmount(
-          PowerAmountUnit.Joule,
-        ) ?? "N/A",
-        processedFile.bandwidth?.total ?? "N/A",
+        processedFile.powerConsumption?.total
+          ?.getAmount(PowerAmountUnit.Joule)
+          .toString() ?? "N/A",
+        processedFile.bandwidth?.total.toString() ?? "N/A",
       ]),
     });
 
@@ -186,12 +239,9 @@ const PROCESSING_WORKER_PATH = path.resolve(
         if (!fileName) throw new Error("Splitting file failed");
 
         const powerAmountSeries = file.powerConsumption?.measurements;
-        powerAmountSeries?.convert(PowerAmountUnit.Joule);
 
         writeCSV({
-          path:
-            rawResultsPath +
-            `/${result.benchmark}-${result.framework}_power-raw.csv`,
+          path: rawResultsPath + `/${file.name}_power-raw.csv`,
           header: [
             "Time",
             `Total Power (${powerAmountSeries?.getUnit() ?? "N/A"})`,
@@ -199,16 +249,20 @@ const PROCESSING_WORKER_PATH = path.resolve(
           fields:
             powerAmountSeries
               ?.getMeasurements()
-              .map((measurement) => [measurement.time, measurement.power]) ??
-            [],
+              .map((measurement) => [
+                measurement.time.toString(),
+                measurement.power.toString(),
+              ]) ?? [],
         });
 
         writeCSV({
-          path:
-            rawResultsPath +
-            `/${result.benchmark}-${result.framework}_bandwidth-raw.csv`,
-          header: ["File", "Total Bandwidth (bytes)"],
-          fields: file.bandwidth?.measurements ?? [],
+          path: rawResultsPath + `/${file.name}_bandwidth-raw.csv`,
+          header: ["File", "Total Bandwidth (B)"],
+          fields:
+            file.bandwidth?.measurements.map(([file, size]) => [
+              file,
+              size.toString(),
+            ]) ?? [],
         });
       }
     }

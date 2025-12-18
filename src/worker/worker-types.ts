@@ -4,11 +4,15 @@ import type {
   BenchmarkPowerConsumption,
   SerializedBenchmarkPowerConsumption,
 } from "../utilities/power-utilities.ts";
-import type { BenchmarkBandwidth } from "../utilities/bandwidth.ts";
+import type {
+  BenchmarkBandwidth,
+  SerializedBandwidth,
+  SerializedBenchmarkBandwidth,
+} from "../utilities/bandwidth.ts";
 
 export type SerializedProcessedFile = InputFile & {
   powerConsumption?: SerializedBenchmarkPowerConsumption;
-  bandwidth?: BenchmarkBandwidth;
+  bandwidth?: SerializedBenchmarkBandwidth;
 };
 
 export type ProcessedFile = InputFile & {
@@ -26,8 +30,8 @@ export type WorkerOutputData = {
   framework: string;
   powerAverage?: SerializedPowerAmount;
   powerStandardDeviation?: SerializedPowerAmount;
-  bandwidthAverage?: number;
-  bandwidthStandardDeviation?: number;
+  bandwidthAverage?: SerializedBandwidth;
+  bandwidthStandardDeviation?: SerializedBandwidth;
   files: SerializedProcessedFile[];
 };
 
@@ -42,7 +46,7 @@ export type MessageType = (typeof MessageType)[keyof typeof MessageType];
 type PayloadMap = {
   [MessageType.Start]: WorkerInputData;
   [MessageType.Finished]: WorkerOutputData;
-  [MessageType.Error]: { error: string };
+  [MessageType.Error]: { error: Error };
   [MessageType.Terminate]: null;
 };
 
