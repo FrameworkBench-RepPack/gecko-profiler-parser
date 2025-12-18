@@ -89,11 +89,12 @@ const PROCESSING_WORKER_PATH = path.resolve(
   }
   await Promise.all(workers);
 
-  const [resultsPath, summedResultsPath, rawResultsPath] =
+  const [resultsPath, summedResultsPath, combinedResultsPath, rawResultsPath] =
     await getResultsPaths({
       inputPath,
       resultsFolderName: "processed-results",
       summedResultsFolderName: "summed-results",
+      combinedResultsFolderName: "combined-results",
       rawResultsFolderName: options.exportRaw ? "raw-results" : undefined,
     });
 
@@ -159,6 +160,39 @@ const PROCESSING_WORKER_PATH = path.resolve(
         `Total Power SD (${PowerAmountUnit.Joule})`,
         `Average Total Bandwidth (B)`,
         `Total Bandwidth SD (B)`,
+      ],
+      fields: result,
+    });
+  }
+
+  /* Export per benchmark CSV processed results*/
+  const combinedPerBenchmarkIterations = deserializedResults.reduce<
+    Record<string, string[][]>
+  >((acc, result) => {
+    if (!acc[result.benchmark]) acc[result.benchmark] = [];
+
+    for (const file of result.files) {
+      acc[result.benchmark]?.push([
+        result.framework,
+        file.powerConsumption.total
+          ?.getAmount(PowerAmountUnit.Joule)
+          .toString() ?? "N/A",
+        file.bandwidth?.total?.toString() ?? "N/A",
+      ]);
+    }
+
+    return acc;
+  }, {});
+
+  for (const [benchmark, result] of Object.entries(
+    combinedPerBenchmarkIterations,
+  )) {
+    writeCSV({
+      path: combinedResultsPath + `/${benchmark}.csv`,
+      header: [
+        "Framework",
+        `Total Power (${PowerAmountUnit.Joule})`,
+        `Total Bandwidth (B)`,
       ],
       fields: result,
     });
