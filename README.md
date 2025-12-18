@@ -1,1 +1,1 @@
-# firefox-profiler-parser
+# gecko-profiler-parser
