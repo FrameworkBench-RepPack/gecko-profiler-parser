@@ -95,7 +95,9 @@ const PROCESSING_WORKER_PATH = path.resolve(
       resultsFolderName: "processed-results",
       summedResultsFolderName: "summed-results",
       combinedResultsFolderName: "combined-results",
-      rawResultsFolderName: options.exportRaw ? "raw-results" : undefined,
+      rawResultsFolderName: options.exportRaw
+        ? "extracted-raw-results"
+        : undefined,
     });
 
   // Deserialize results
